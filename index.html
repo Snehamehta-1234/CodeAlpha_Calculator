@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #e6e6e6;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+            letter-spacing: 2px;
+        }
+
+        .calc {
+            display: inline-block;
+            padding: 15px;
+            border-radius: 20px;
+            background: #dcdcdc;
+            box-shadow: 6px 6px 12px #aaa,
+                        -6px -6px 12px #fff;
+        }
+
+        #answer {
+            width: 100%;
+            height: 65px;
+            margin-bottom: 12px;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            outline: none;
+            background: #e6e6e6;
+            box-shadow: inset 4px 4px 8px #aaa,
+                        inset -4px -4px 8px #fff;
+            font-size: 26px;
+            text-align: right;
+            color: #222;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 65px);
+            gap: 10px;
+        }
+
+        .buttons button {
+            height: 55px;
+            border: none;
+            border-radius: 10px;
+            background: #e6e6e6;
+            box-shadow: 4px 4px 7px #aaa,
+                        -4px -4px 7px #fff;
+            font-size: 21px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .buttons button:active {
+            box-shadow: inset 4px 4px 7px #aaa,
+                        inset -4px -4px 7px #fff;
+        }
+
+        .buttons .operator {
+            color: #087e8b;
+            font-weight: bold;
+        }
+
+        .buttons .clear {
+            color: #d93636;
+        }
+
+        .buttons .equal {
+            background: #087e8b;
+            color: white;
+        }
+
+        @media (max-width: 340px) {
+            .buttons {
+                grid-template-columns: repeat(4, 55px);
+                gap: 8px;
+            }
+
+            .buttons button {
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>CALCULATOR</h1>
+
+        <div class="calc">
+            <input
+                type="text"
+                id="answer"
+                aria-label="Calculator display"
+                placeholder="0"
+                autocomplete="off"
+                readonly
+            >
+
+            <div class="buttons">
+                <button type="button" onclick="add('1')">1</button>
+                <button type="button" onclick="add('2')">2</button>
+                <button type="button" onclick="add('3')">3</button>
+                <button type="button" class="clear" onclick="clearScreen()">AC</button>
+
+                <button type="button" onclick="add('4')">4</button>
+                <button type="button" onclick="add('5')">5</button>
+                <button type="button" onclick="add('6')">6</button>
+                <button type="button" class="operator" onclick="add('+')">+</button>
+
+                <button type="button" onclick="add('7')">7</button>
+                <button type="button" onclick="add('8')">8</button>
+                <button type="button" onclick="add('9')">9</button>
+                <button type="button" class="operator" onclick="add('-')">−</button>
+
+                <button type="button" onclick="add('.')">.</button>
+                <button type="button" onclick="add('0')">0</button>
+                <button type="button" class="equal" onclick="calculate()">=</button>
+                <button type="button" class="operator" onclick="add('*')">×</button>
+
+                <button type="button" onclick="add('(')">(</button>
+                <button type="button" onclick="add(')')">)</button>
+                <button type="button" class="operator" onclick="add('%')">%</button>
+                <button type="button" class="operator" onclick="add('/')">÷</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const screen = document.getElementById("answer");
+        let justCalculated = false;
+
+        function add(value) {
+            if (screen.value === "Error") {
+                screen.value = "";
+            }
+
+            if (justCalculated) {
+                if ("0123456789.(".includes(value)) {
+                    screen.value = "";
+                }
+                justCalculated = false;
+            }
+
+            screen.value += value;
+        }
+
+        function clearScreen() {
+            screen.value = "";
+            justCalculated = false;
+        }
+
+        // Safely calculate expressions without eval()
+        function calculate() {
+            const expression = screen.value;
+
+            if (!expression.trim()) return;
+
+            try {
+                const result = parseExpression(expression);
+
+                if (!Number.isFinite(result)) {
+                    throw new Error("Invalid result");
+                }
+
+                screen.value = String(
+                    Number(result.toPrecision(12))
+                );
+
+                justCalculated = true;
+            } catch (error) {
+                screen.value = "Error";
+                justCalculated = true;
+            }
+        }
+
+        function parseExpression(expression) {
+            const tokens = expression.match(
+                /\d*\.?\d+|[()+\-*/%]/g
+            );
+
+            if (!tokens || tokens.join("") !== expression.replace(/\s/g, "")) {
+                throw new Error("Invalid expression");
+            }
+
+            let position = 0;
+
+            function peek() {
+                return tokens[position];
+            }
+
+            function consume() {
+                return tokens[position++];
+            }
+
+            function primary() {
+                const token = peek();
+
+                if (token === "+" || token === "-") {
+                    consume();
+                    const value = primary();
+                    return token === "-" ? -value : value;
+                }
+
+                if (token === "(") {
+                    consume();
+                    const value = addition();
+
+                    if (consume() !== ")") {
+                        throw new Error("Missing bracket");
+                    }
+
+                    return value;
+                }
+
+                if (token === undefined || token === ")") {
+                    throw new Error("Invalid number");
+                }
+
+                consume();
+                const value = Number(token);
+
+                if (!Number.isFinite(value)) {
+                    throw new Error("Invalid number");
+                }
+
+                return value;
+            }
+
+            function multiplication() {
+                let value = primary();
+
+                while (["*", "/", "%"].includes(peek())) {
+                    const operator = consume();
+                    const next = primary();
+
+                    if ((operator === "/" || operator === "%")
+                        && next === 0) {
+                        throw new Error("Cannot divide by zero");
+                    }
+
+                    if (operator === "*") value *= next;
+                    if (operator === "/") value /= next;
+                    if (operator === "%") value %= next;
+                }
+
+                return value;
+            }
+
+            function addition() {
+                let value = multiplication();
+
+                while (peek() === "+" || peek() === "-") {
+                    const operator = consume();
+                    const next = multiplication();
+
+                    if (operator === "+") value += next;
+                    else value -= next;
+                }
+
+                return value;
+            }
+
+            const result = addition();
+
+            if (position !== tokens.length) {
+                throw new Error("Invalid expression");
+            }
+
+            return result;
+        }
+
+        document.addEventListener("keydown", function(event) {
+            if (/^[0-9.+\-*/%()]$/.test(event.key)) {
+                event.preventDefault();
+                add(event.key);
+            } else if (event.key === "Enter" || event.key === "=") {
+                event.preventDefault();
+                calculate();
+            } else if (event.key === "Backspace") {
+                screen.value = screen.value.slice(0, -1);
+                justCalculated = false;
+            } else if (event.key === "Escape") {
+                clearScreen();
+            }
+        });
+    </script>
+
+</body>
+</html>
+```
